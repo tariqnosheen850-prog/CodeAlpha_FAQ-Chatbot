@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ Chatbot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .chat-container {
+    width: 100%;
+    max-width: 480px;
+    height: 640px;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chat-header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .chat-header .avatar {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .chat-header h1 { font-size: 17px; font-weight: 600; }
+  .chat-header p { font-size: 12px; opacity: 0.85; }
+
+  .chat-messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f4f5fb;
+  }
+  .msg {
+    max-width: 82%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    animation: pop 0.15s ease;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .bot {
+    align-self: flex-start;
+    background: #fff;
+    color: #1f2937;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .suggestions {
+    padding: 10px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #f4f5fb;
+    border-top: 1px solid #e5e7eb;
+  }
+  .chip {
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .chip:hover { background: #4f46e5; color: #fff; }
+
+  .chat-input {
+    display: flex;
+    padding: 12px;
+    gap: 8px;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+  }
+  .chat-input input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 24px;
+    font-size: 14px;
+    outline: none;
+  }
+  .chat-input input:focus { border-color: #7c3aed; }
+  .chat-input button {
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    color: #fff;
+    border: none;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s;
+  }
+  .chat-input button:hover { transform: scale(1.06); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-header">
+    <div class="avatar">🤖</div>
+    <div>
+      <h1>FAQ Assistant</h1>
+      <p>Ask me anything about your account</p>
+    </div>
+  </div>
+
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <div class="suggestions" id="suggestions"></div>
+
+  <div class="chat-input">
+    <input type="text" id="userInput" placeholder="Type your question..." autocomplete="off">
+    <button id="sendBtn">➤</button>
+  </div>
+</div>
+
+<script>
+  const faqs = [
+    { question: "How do I create an account?", answer: "Click on the Sign Up button on the homepage, enter your email and password, then verify your email address to activate your account." },
+    { question: "How can I reset my password?", answer: "Go to the login page, click 'Forgot Password', enter your registered email, and follow the reset link sent to your inbox." },
+    { question: "What payment methods do you accept?", answer: "We accept credit cards, debit cards, PayPal, and major mobile wallets like Easypaisa and JazzCash." },
+    { question: "Can I get a refund if I am not satisfied?", answer: "Yes, we offer a full refund within 14 days of purchase if you are not satisfied with the course." },
+    { question: "How do I contact customer support?", answer: "You can reach our support team via the Help Center chat, or email us at support@example.com, available 24/7." },
+    { question: "Do the courses come with a certificate?", answer: "Yes, you receive a downloadable certificate of completion once you finish all the modules and pass the final quiz." },
+    { question: "Can I access courses on my mobile phone?", answer: "Yes, our platform is fully responsive and we also have dedicated apps for Android and iOS." },
+    { question: "How long do I have access to a purchased course?", answer: "Once purchased, you have lifetime access to the course content, including any future updates." },
+    { question: "Is there a free trial available?", answer: "Yes, new users get a 7 day free trial with access to selected introductory courses." },
+    { question: "How do I download course materials for offline use?", answer: "Open the course, go to the Resources tab, and click the download icon next to each video or PDF file." }
+  ];
+
+  const STOPWORDS = new Set(["a","an","the","is","are","do","does","did","how","what","can","i","you","my","me","to","for","of","in","on","and","or","get","if","am","be","will","with"]);
+
+  function tokenize(text) {
+    return text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w && !STOPWORDS.has(w));
+  }
+
+  const faqTokens = faqs.map(f => new Set(tokenize(f.question)));
+
+  function findBestMatch(userText) {
+    const userTokens = tokenize(userText);
+    if (userTokens.length === 0) return null;
+
+    let bestIdx = -1, bestScore = 0;
+    faqTokens.forEach((tokSet, idx) => {
+      let score = 0;
+      userTokens.forEach(t => { if (tokSet.has(t)) score++; });
+      if (score > bestScore) { bestScore = score; bestIdx = idx; }
+    });
+
+    if (bestIdx === -1 || bestScore === 0) return null;
+    return faqs[bestIdx];
+  }
+
+  const chatMessages = document.getElementById("chatMessages");
+  const userInput = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const suggestionsEl = document.getElementById("suggestions");
+
+  function addMessage(text, sender) {
+    const div = document.createElement("div");
+    div.className = "msg " + sender;
+    div.textContent = text;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function renderSuggestions() {
+    suggestionsEl.innerHTML = "";
+    const sample = faqs.slice(0, 4);
+    sample.forEach(f => {
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.textContent = f.question;
+      chip.onclick = () => {
+        userInput.value = f.question;
+        handleSend();
+      };
+      suggestionsEl.appendChild(chip);
+    });
+  }
+
+  function handleSend() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    addMessage(text, "user");
+    userInput.value = "";
+
+    setTimeout(() => {
+      const match = findBestMatch(text);
+      if (match) {
+        addMessage(match.answer, "bot");
+      } else {
+        addMessage("Sorry, I don't have an answer for that yet. Try asking about account creation, password reset, payments, refunds, support, certificates, mobile access, course access, free trial, or downloads.", "bot");
+      }
+    }, 350);
+  }
+
+  sendBtn.addEventListener("click", handleSend);
+  userInput.addEventListener("keydown", e => { if (e.key === "Enter") handleSend(); });
+
+  // Initial greeting
+  addMessage("Hi! 👋 I'm your FAQ assistant. Ask me a question, or tap a suggestion below.", "bot");
+  renderSuggestions();
+</script>
+
+</body>
+</html>
